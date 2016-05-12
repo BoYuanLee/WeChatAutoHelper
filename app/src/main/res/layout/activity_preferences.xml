@@ -39,5 +39,5 @@
               android:layout_height="match_parent"
               android:id="@+id/preferences_fragment"
               tools:layout="@android:layout/simple_list_item_1"
-              class="xyz.monkeytong.hongbao.fragments.GeneralSettingsFragment"/>
+              class="com.pudge.wechat.autohelper.fragments.GeneralSettingsFragment"/>
 </LinearLayout>

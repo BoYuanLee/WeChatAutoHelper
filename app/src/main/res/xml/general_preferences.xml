@@ -27,7 +27,7 @@
                 android:title="自动拆开红包"
                 android:layout="@layout/preference_checkbox"
                 android:defaultValue="true"/>
-        <xyz.monkeytong.hongbao.activities.SeekBarPreference
+        <com.pudge.wechat.autohelper.activities.SeekBarPreference
                 android:key="pref_open_delay"
                 android:title="延时拆开红包"
                 pref_kind="pref_open_delay"
