@@ -1,22 +1,11 @@
 package com.pudge.wechat.autohelper.services;
 
 import android.accessibilityservice.AccessibilityService;
-import android.annotation.TargetApi;
-import android.app.Notification;
-import android.app.PendingIntent;
-import android.content.ComponentName;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.graphics.Rect;
-import android.os.Bundle;
-import android.os.Parcelable;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-
-import com.pudge.wechat.autohelper.utils.HongbaoSignature;
-import com.pudge.wechat.autohelper.utils.PowerUtil;
+import android.os.Handler;
 
 import java.util.List;
 
@@ -25,36 +14,10 @@ public class WechatAutoHelperService extends AccessibilityService implements Sha
 
     private AccessibilityNodeInfo rootNodeInfo;
 
-    private static int countvalue = 0;
-
-    private static boolean ISROOMMEMBER = false;
-
-    private static AccessibilityNodeInfo currentNodeInfo;
-
-    private static int currentListItem = 1;
-
-    private static boolean HASADDFRIEND = false;
+    private static int currentListItem = 0;
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
-
-        Log.i("event111", accessibilityEvent.toString());
-        if (accessibilityEvent.getSource() != null && "com.tencent.mm.plugin.chatroom.ui.SeeRoomMemberUI".equals(accessibilityEvent.getClassName())) {
-            ISROOMMEMBER = true;
-        } else if (accessibilityEvent.getSource() != null && "com.tencent.mm.plugin.profile.ui.ContactInfoUI".equals(accessibilityEvent.getClassName())){
-            ISROOMMEMBER = false;
-            if (HASADDFRIEND) {
-                performGlobalAction(GLOBAL_ACTION_BACK);
-                return;
-             }
-            findAndPerformAction("添加到通讯录");
-            return;
-        } else if (accessibilityEvent.getSource() != null && "com.tencent.mm.ui.base.p".equals(accessibilityEvent.getClassName())){
-            ISROOMMEMBER = false;
-            HASADDFRIEND = true;
-            performGlobalAction(GLOBAL_ACTION_BACK);
-            return;
-        }
 
         this.rootNodeInfo = getRootInActiveWindow();
 
@@ -62,52 +25,66 @@ public class WechatAutoHelperService extends AccessibilityService implements Sha
             return;
         }
 
-        int childCount = rootNodeInfo.getChildCount();
+        Log.i("accessibilityEvent", accessibilityEvent.toString());
 
-        Log.i("childCount", childCount + "");
+        if (accessibilityEvent.getSource() != null && "com.tencent.mm.plugin.chatroom.ui.SeeRoomMemberUI".equals(accessibilityEvent.getClassName())) {
 
-        for (int i = 0; i < childCount; i++) {
+            int childCount = this.rootNodeInfo.getChildCount();
 
-            AccessibilityNodeInfo nodeInfo = rootNodeInfo.getChild(i);
+            Log.i("childCount", childCount + "");
 
-            int size = nodeInfo.getChildCount();
-            Log.i("size", size + "");
-            for (int j = 0; j < size; j++) {
-                AccessibilityNodeInfo subNodeInfo = nodeInfo.getChild(j);
-                Log.i("sub", subNodeInfo.getClassName() + "");
-                if (subNodeInfo.getClassName().equals("android.widget.ListView")) {
-                    currentNodeInfo = subNodeInfo;
-                    int listSize = subNodeInfo.getChildCount();
-                    for (; currentListItem < listSize; currentListItem++) {
-                        AccessibilityNodeInfo listItemInfo = subNodeInfo.getChild(currentListItem);
-                        listItemInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        if (currentListItem == listSize - 1) {
+            for (int i = 0; i < childCount; i++) {
+
+                AccessibilityNodeInfo nodeInfo = this.rootNodeInfo.getChild(i);
+                int size = nodeInfo.getChildCount();
+                Log.i("size", size + "");
+                for (int j = 0; j < size; j++) {
+                    AccessibilityNodeInfo subNodeInfo = nodeInfo.getChild(j);
+                    Log.i("sub", subNodeInfo.getClassName() + "");
+                    if (subNodeInfo.getClassName().equals("android.widget.ListView")) {
+                        int listSize = subNodeInfo.getChildCount();
+                        for (; currentListItem < listSize; ) {
+                            final AccessibilityNodeInfo listItemInfo = subNodeInfo.getChild(currentListItem);
+                            new Handler().postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    currentListItem++;
+                                    listItemInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                                }
+                            }, 1000);
+                        }
+                        if (currentListItem == listSize) {
                             subNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
                             currentListItem = 0;
                         }
-
                     }
-//                    subNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
-//                    Log.i("sub sub size", subNodeInfo.getChildCount() + "");
-                /*    Log.i("itemCount", subNodeInfo.getActionList().get(1).)*/
-//                    countvalue += subNodeInfo.getChildCount();
-                    Log.i("countvalue", countvalue + "");
-                    // subNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
                 }
             }
-          /*  AccessibilityNodeInfo nodeInfo = rootNodeInfo.getChild(i);
-            nodeInfo.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);*/
+
+        } else if (accessibilityEvent.getSource() != null && "com.tencent.mm.plugin.profile.ui.ContactInfoUI".equals(accessibilityEvent.getClassName())){
+
+            if (isHaveButton("发消息")) {
+                performGlobalAction(GLOBAL_ACTION_BACK);
+             } else {
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        findAndPerformAction("添加到通讯录");
+                        if (isHaveButton("发消息")) {
+                            performGlobalAction(GLOBAL_ACTION_BACK);
+                        }
+                    }
+                }, 1000);
+            }
+        } else if (accessibilityEvent.getSource() != null && "com.tencent.mm.ui.base.p".equals(accessibilityEvent.getClassName())){
+
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    findAndPerformAction("发送");
+                }
+            }, 1000);
         }
-
-
-
-     /*  List<AccessibilityNodeInfo> subNodeInfo = rootNodeInfo.findAccessibilityNodeInfosByText("恒玉哥");
-        if (subNodeInfo != null && subNodeInfo.size() > 0) {
-            Log.i("subNodeInfo", subNodeInfo.get(0).getWindowId() + "");
-            subNodeInfo.get(0).getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
-
-        }*/
-
     }
 
     @Override
@@ -134,10 +111,30 @@ public class WechatAutoHelperService extends AccessibilityService implements Sha
         }
         for (int i = 0; i < nodes.size(); i++) {
             AccessibilityNodeInfo node = nodes.get(i);
-            if (node.getClassName().equals("android.widget.Button") && node.isEnabled()) {
+            if ((node.getClassName().equals("android.widget.Button") || node.getClassName().equals("android.widget.TextView")) && node.isEnabled()) {
                 node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
         }
 
+    }
+
+    private boolean isHaveButton(String text) {
+        if (getRootInActiveWindow() == null) {
+            return false;
+        }
+
+        List<AccessibilityNodeInfo> nodeInfos = getRootInActiveWindow().findAccessibilityNodeInfosByText(text);
+
+        if (nodeInfos == null || nodeInfos.size() < 1) {
+            return  false;
+        }
+
+        for (int i = 0; i < nodeInfos.size(); i++) {
+            AccessibilityNodeInfo nodeInfo = nodeInfos.get(i);
+            if (nodeInfo.getClassName().equals("android.widget.Button") && nodeInfo.isEnabled()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
