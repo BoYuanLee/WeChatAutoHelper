@@ -15,7 +15,7 @@ public class WechatAutoHelperService extends AccessibilityService implements Sha
 
     private AccessibilityNodeInfo rootNodeInfo;
 
-    private static int currentListItem = 2;
+    private static int currentListItem = 1;
 
     private static boolean IS_SENDED = false;
 
@@ -23,7 +23,12 @@ public class WechatAutoHelperService extends AccessibilityService implements Sha
     @Override
     public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
 
+        Log.i("accessibilityEvent", accessibilityEvent.toString());
+
+        Log.i("Event ClassName", accessibilityEvent.getClassName().toString());
+
         if (accessibilityEvent.getSource() != null && "com.tencent.mm.plugin.chatroom.ui.SeeRoomMemberUI".equals(accessibilityEvent.getClassName())) {
+            IS_SENDED = false;
             this.rootNodeInfo = getRootInActiveWindow();
             if (this.rootNodeInfo == null) {
                 return;
@@ -45,46 +50,58 @@ public class WechatAutoHelperService extends AccessibilityService implements Sha
                     Log.i("sub", subNodeInfo.getClassName() + "");
                     if (subNodeInfo.getClassName().equals("android.widget.ListView")) {
                         int listSize = subNodeInfo.getChildCount();
-                       /* if (listSize == currentListItem) {
 
-                        }*/
-                        for (; currentListItem < listSize; ) {
-                            Log.i("currentListItem", currentListItem + "");
-                            currentListItem++;
-                            final AccessibilityNodeInfo listItemInfo = subNodeInfo.getChild(currentListItem);
-                            new Handler().postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    listItemInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                                }
-                            }, 2000);
-                            break;
+                        Log.i("listSize", listSize + "");
+
+                        if (currentListItem == listSize) {
+                            currentListItem = 0;
+                            subNodeInfo.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+                        } else {
+                            for (; currentListItem < listSize; ) {
+                                Log.i("currentListItem", currentListItem + "");
+                                Log.i("subNodeInfo", subNodeInfo.toString());
+
+                                final AccessibilityNodeInfo listItemInfo = subNodeInfo.getChild(currentListItem);
+                                Log.i("listItemInfo", listItemInfo.toString());
+                                currentListItem++;
+                                new Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        listItemInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                                    }
+                                }, 2000);
+                                break;
+                            }
                         }
                     }
                 }
             }
         } else if (accessibilityEvent.getSource() != null && "com.tencent.mm.plugin.profile.ui.ContactInfoUI".equals(accessibilityEvent.getClassName())) {
             Log.i("添加到通讯录", "添加到通讯录");
-            if (IS_SENDED) {
-                IS_SENDED = false;
+            if (!IS_SENDED) {
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i("添加到通讯录 r", "添加到通讯录 r");
+                        findAndPerformAction("添加到通讯录", false);
+                        if (isHaveButton("发消息")) {
+                            performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+                        }
+                    }
+                }, 2000);
+            } else {
                 performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
-                return;
             }
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    Log.i("添加到通讯录 r", "添加到通讯录 r");
-                    findAndPerformAction("添加到通讯录", false);
-                }
-            }, 2000);
+
+
         } else if (accessibilityEvent.getSource() != null && "com.tencent.mm.plugin.profile.ui.SayHiWithSnsPermissionUI".equals(accessibilityEvent.getClassName())) {
             Log.i("发送", "发送");
             new Handler().postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     Log.i("发送 r", "发送 r");
-                    findAndPerformAction("发送", false);
                     IS_SENDED = true;
+                    findAndPerformAction("发送", false);
                 }
             }, 2000);
         }
@@ -111,7 +128,13 @@ public class WechatAutoHelperService extends AccessibilityService implements Sha
             return false;
         }
 
-        return true;
+        for (int i = 0; i < nodes.size(); i++) {
+            AccessibilityNodeInfo node = nodes.get(i);
+            if ((node.getClassName().equals("android.widget.Button") || node.getClassName().equals("android.widget.TextView") ) && node.isEnabled()) {
+              return true;
+            }
+        }
+        return false;
     }
 
     @TargetApi(18)
